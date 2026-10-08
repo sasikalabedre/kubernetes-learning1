@@ -35,9 +35,19 @@ Hands-on manifests and notes. Each topic was learned on minikube first, then pra
     gcloud container clusters delete practice-cluster --zone asia-south1-a
 
 Delete the cluster after each session so the node stops costing money.
+### Resource requests and limits (04-resources)
+- A request is what a container needs, and the scheduler uses it to pick a node. A limit is the most it may use.
+- CPU over the limit is throttled. Memory over the limit is killed (OOMKilled). A request bigger than any node leaves the pod Pending.
+- Units: `500m` is half a CPU core, and `128Mi` is 128 mebibytes.
+
+### Health probes (05-probes)
+- Liveness failure restarts the container. Readiness failure removes the pod from the Service without a restart. A startup probe gives slow apps time to start.
+- Probe types: httpGet, tcpSocket and exec.
+- A pod can be Running but not Ready, and then the Service shows no endpoints for it.
 
 ## Troubleshooting notes
 - **Cluster creation failed with `Constraint constraints/compute.vmExternalIpAccess violated`.** An organization policy blocked external IPs for the node VMs. Fix: set the policy to Allow all (policy enforcement: Replace) on the practice project, delete the failed cluster, and create it again.
 - **`kubectl logs` says "waiting to start: ContainerCreating".** The image is still downloading. Wait until the pod is Running.
 - **`kubectl apply` messages:** created = new, configured = changed, unchanged = same as the cluster.
+
 
