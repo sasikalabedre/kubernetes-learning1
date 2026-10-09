@@ -45,6 +45,38 @@ Delete the cluster after each session so the node stops costing money.
 - Probe types: httpGet, tcpSocket and exec.
 - A pod can be Running but not Ready, and then the Service shows no endpoints for it.
 
+## Storage (Volumes, PV, PVC, StorageClass)
+- **Volume:** a folder attached to a Pod. It is declared under `volumes:` and mounted under `volumeMounts:` (the names must match).
+- **emptyDir:** survives a container restart, but is deleted when the Pod is deleted.
+- **PVC:** a request for storage (size and access mode). The Pod uses the PVC by `claimName`.
+- **PV:** the real disk inside the cluster. On GKE it is created automatically (dynamic provisioning).
+- **StorageClass:** the recipe for disks (provisioner, disk type, reclaim policy). A PVC picks one with `storageClassName`. The default is used if it is not written.
+- `WaitForFirstConsumer`: the disk is created only when a Pod uses the PVC, so the PVC stays Pending until then.
+- Deleting the Pod keeps the data. Deleting the PVC deletes the disk (reclaimPolicy: Delete).
+- Flow: Pod -> PVC -> StorageClass -> PV -> real GCP disk.
+
+## Ingress and Ingress Controller
+- A LoadBalancer Service creates one load balancer per Service. Ingress gives **one load balancer and one IP for many Services**.
+- **Ingress:** only the routing rules (path or host to Service).
+- **Ingress controller:** the program that follows the rules. On GKE it is built in and creates a Google HTTP load balancer.
+- The load balancer takes 3 to 5 minutes to be ready. A 404 from it means it is working, but no rule matches that path.
+- `pathType: Prefix` matches every URL that starts with the path.
+- Delete the Ingress after practice, because the load balancer costs money.
+
+## StatefulSet, DaemonSet, Job, CronJob
+- **StatefulSet:** fixed Pod names (`web-0`, `web-1`), ordered start, and its own PVC for each Pod from `volumeClaimTemplates`. A recreated Pod gets the same name and the same disk. It needs a headless Service (`clusterIP: None`) so each Pod has its own DNS name.
+- PVCs of a StatefulSet are **not deleted** with it, so delete them by hand.
+- **DaemonSet:** one Pod on every node. There is no `replicas`, and new nodes get a Pod automatically. Used for log and monitoring agents.
+- **Job:** runs a task to completion (`completions`, `parallelism`, `backoffLimit`). It needs `restartPolicy: Never` or `OnFailure`.
+- **CronJob:** creates a Job on a schedule (minute, hour, day of month, month, day of week). It keeps the last 3 successful Jobs by default (`successfulJobsHistoryLimit`).
+
+## HPA (Horizontal Pod Autoscaler)
+- HPA changes the **number of Pods** based on CPU usage, between `minReplicas` and `maxReplicas`.
+- It reads usage from **metrics-server** (already installed on GKE).
+- The target is a percentage of the CPU **request**, so the Deployment must have `resources.requests.cpu`. Without it, the target shows `<unknown>`.
+- Scale up is quick. Scale down waits about 5 minutes.
+- If a Pod stays Pending with `Insufficient cpu`, the node is full. Lower the request or add a node.
+
 ## Troubleshooting notes
 - **Cluster creation failed with `Constraint constraints/compute.vmExternalIpAccess violated`.** An organization policy blocked external IPs for the node VMs. Fix: set the policy to Allow all (policy enforcement: Replace) on the practice project, delete the failed cluster, and create it again.
 - **`kubectl logs` says "waiting to start: ContainerCreating".** The image is still downloading. Wait until the pod is Running.
